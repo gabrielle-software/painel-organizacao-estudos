@@ -196,17 +196,12 @@
   }
 
   function handleTaskAction(event) {
-    const target = event.target.closest("[data-action]");
+    const target = event.target.closest('button[data-action="edit"], button[data-action="delete"]');
     if (!target) return;
     const { action, id } = target.dataset;
     const task = tasks.find((item) => item.id === id);
     if (!task) return;
-    if (action === "toggle") {
-      task.completed = target.checked;
-      persist();
-      render();
-      showToast(task.completed ? "Tarefa concluída. Muito bem!" : "Tarefa reaberta.");
-    } else if (action === "edit") {
+    if (action === "edit") {
       openDialog(task);
     } else if (action === "delete") {
       if (!window.confirm('Deseja realmente excluir a tarefa "' + task.title + '"?')) return;
@@ -217,6 +212,17 @@
     }
   }
 
+  function handleTaskChange(event) {
+    const target = event.target;
+    if (!target.matches('input[data-action="toggle"]')) return;
+    const task = tasks.find((item) => item.id === target.dataset.id);
+    if (!task) return;
+    task.completed = target.checked;
+    persist();
+    render();
+    showToast(task.completed ? "Tarefa concluída. Muito bem!" : "Tarefa reaberta.");
+  }
+
   $("#add-task-top").addEventListener("click", () => openDialog());
   $("#add-task-main").addEventListener("click", () => openDialog());
   $("#empty-add").addEventListener("click", () => openDialog());
@@ -224,7 +230,7 @@
   $("#cancel-dialog").addEventListener("click", closeDialog);
   elements.form.addEventListener("submit", handleSubmit);
   elements.list.addEventListener("click", handleTaskAction);
-  elements.list.addEventListener("change", handleTaskAction);
+  elements.list.addEventListener("change", handleTaskChange);
   elements.search.addEventListener("input", render);
   elements.subjectFilter.addEventListener("change", render);
   elements.statusFilter.addEventListener("change", render);
