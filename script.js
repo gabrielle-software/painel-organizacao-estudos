@@ -42,12 +42,12 @@
       typeof task.completed === "boolean";
   }
 
-  function persist() {
+  function persist(nextTasks = tasks) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextTasks));
       return true;
     } catch {
-      showToast("Não foi possível salvar neste navegador.");
+      showToast("Não foi possível salvar neste navegador. Suas alterações não foram aplicadas.");
       return false;
     }
   }
@@ -182,17 +182,22 @@
       elements.error.textContent = "Selecione uma prioridade válida.";
       return;
     }
+    let nextTasks;
     if (editingId) {
-      const task = tasks.find((item) => item.id === editingId);
-      if (task) Object.assign(task, { title, subject, date, priority });
-      showToast("Tarefa atualizada!");
+      nextTasks = tasks.map((task) => task.id === editingId
+        ? { ...task, title, subject, date, priority }
+        : task);
     } else {
-      tasks.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(), title, subject, date, priority, completed: false, createdAt: new Date().toISOString() });
-      showToast("Tarefa adicionada!");
+      nextTasks = [...tasks, {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+        title, subject, date, priority, completed: false, createdAt: new Date().toISOString()
+      }];
     }
-    persist();
+    if (!persist(nextTasks)) return;
+    tasks = nextTasks;
     closeDialog();
     render();
+    showToast(editingId ? "Tarefa atualizada!" : "Tarefa adicionada!");
   }
 
   function handleTaskAction(event) {
@@ -205,8 +210,9 @@
       openDialog(task);
     } else if (action === "delete") {
       if (!window.confirm('Deseja realmente excluir a tarefa "' + task.title + '"?')) return;
-      tasks = tasks.filter((item) => item.id !== id);
-      persist();
+      const nextTasks = tasks.filter((item) => item.id !== id);
+      if (!persist(nextTasks)) return;
+      tasks = nextTasks;
       render();
       showToast("Tarefa excluída.");
     }
@@ -217,8 +223,14 @@
     if (!target.matches('input[data-action="toggle"]')) return;
     const task = tasks.find((item) => item.id === target.dataset.id);
     if (!task) return;
-    task.completed = target.checked;
-    persist();
+    const nextTasks = tasks.map((item) => item.id === task.id
+      ? { ...item, completed: target.checked }
+      : item);
+    if (!persist(nextTasks)) {
+      render();
+      return;
+    }
+    tasks = nextTasks;
     render();
     showToast(task.completed ? "Tarefa concluída. Muito bem!" : "Tarefa reaberta.");
   }
